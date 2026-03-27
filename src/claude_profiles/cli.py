@@ -163,6 +163,57 @@ def cmd_init(args: argparse.Namespace):
     return 0
 
 
+def cmd_create(args: argparse.Namespace):
+    """Create a new profile with symlinks to canonical."""
+    name = args.name
+    config = Config.load()
+
+    if name in config.profiles:
+        print(f"Profile '{name}' already exists at {config.profiles[name]}")
+        return 1
+
+    # name "r" -> ~/.rclaude
+    profile_dir = HOME / f".{name}claude"
+    if profile_dir.exists():
+        print(f"Directory {profile_dir} already exists but isn't registered. Run 'init' to pick it up.")
+        return 1
+
+    profile_dir.mkdir(parents=True)
+    canonical_path = Path(config.profiles[config.canonical])
+
+    # Create shared symlinks
+    for d in SHARED_DIRS:
+        target = canonical_path / d
+        (profile_dir / d).symlink_to(target)
+
+    for f in SHARED_FILES:
+        target = canonical_path / f
+        if target.exists():
+            (profile_dir / f).symlink_to(target)
+
+    # Register
+    config.profiles[name] = str(profile_dir)
+    config.save()
+
+    print(f"Created profile '{name}' at {profile_dir}")
+    print(f"  Shared dirs linked to {canonical_path}")
+
+    # Copy credentials if requested
+    if args.copy_creds_from:
+        src_profile = args.copy_creds_from
+        src_path = _resolve_profile_path(src_profile, config)
+        for f in CRED_FILES:
+            src = Path(src_path) / f
+            if src.exists():
+                dst = profile_dir / f
+                shutil.copy2(src, dst)
+                dst.chmod(0o600)
+                print(f"  Copied {f} from {src_profile}")
+
+    print(f"\nLaunch with: claude-profiles run {name}")
+    return 0
+
+
 def cmd_status(args: argparse.Namespace):
     """Show all profiles and their link health."""
     config = Config.load()
@@ -485,6 +536,20 @@ def main():
     )
     sub = parser.add_subparsers(dest="command", metavar="command")
 
+    create_p = sub.add_parser(
+        "create",
+        help="Create a new profile",
+        description="Create a new profile directory with symlinks to the canonical profile.\n"
+                    "Optionally copy credentials from an existing profile.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="Examples:\n"
+               "  claude-profiles create r\n"
+               "  claude-profiles create work --copy-creds-from s\n",
+    )
+    create_p.add_argument("name", help="Profile name (e.g., r -> ~/.rclaude)")
+    create_p.add_argument("--copy-creds-from", metavar="PROFILE",
+                          help="Copy credentials from an existing profile")
+
     sub.add_parser(
         "init",
         help="Discover profiles and set up symlinks",
@@ -560,6 +625,7 @@ def main():
         return 0
 
     commands = {
+        "create": cmd_create,
         "init": cmd_init,
         "status": cmd_status,
         "link": cmd_link,
