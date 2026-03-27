@@ -29,15 +29,16 @@ from pathlib import Path
 HOME = Path.home()
 CONFIG_PATH = HOME / ".claude" / "profiles.json"
 
-# Directories that should be symlinked (shared across profiles)
-SHARED_DIRS = ["skills", "projects"]
+# Directories/files shared across profiles (symlinked to canonical).
+# Everything except identity and transient session state.
+SHARED_DIRS = ["skills", "projects", "plugins", "plans"]
+SHARED_FILES = ["settings.json"]
 
-# Files/dirs that are per-profile (never shared)
+# Per-profile only (identity or session-bound, never shared)
 PRIVATE = {
-    ".credentials.json",
-    ".claude.json",
-    "settings.json",
-    "history.jsonl",
+    ".credentials.json",  # auth tokens
+    ".claude.json",       # oauthAccount, userID, per-profile state
+    "history.jsonl",      # session history (large, per-profile)
     "sessions",
     "session-env",
     "debug",
@@ -45,11 +46,9 @@ PRIVATE = {
     "backups",
     "file-history",
     "paste-cache",
-    "plans",
     "image-cache",
     "ide",
     "shell-snapshots",
-    "plugins",
     "stats-cache.json",
     "mcp-needs-auth-cache.json",
 }
@@ -144,28 +143,19 @@ def cmd_init(args: argparse.Namespace):
         profile_path = Path(path_str)
         profile_path.mkdir(parents=True, exist_ok=True)
 
+        # Symlink shared directories
         for d in SHARED_DIRS:
             target = canonical_path / d
             link = profile_path / d
+            _ensure_symlink(name, d, link, target, is_dir=True)
 
-            if link.is_symlink():
-                if link.resolve() == target.resolve():
-                    print(f"  {name}/{d} -> already linked")
-                    continue
-                else:
-                    link.unlink()
-                    print(f"  {name}/{d} -> relinked (was pointing elsewhere)")
-
-            if link.is_dir():
-                # Merge contents into canonical, then replace with symlink
-                print(f"  {name}/{d} -> merging into canonical and linking")
-                _merge_dir(link, target)
-                shutil.rmtree(link)
-            elif link.exists():
-                link.unlink()
-
-            link.symlink_to(target)
-            print(f"  {name}/{d} -> {target}")
+        # Symlink shared files
+        for f in SHARED_FILES:
+            target = canonical_path / f
+            link = profile_path / f
+            if not target.exists():
+                continue
+            _ensure_symlink(name, f, link, target, is_dir=False)
 
     config.save()
     print(f"\nConfig saved to {CONFIG_PATH}")
@@ -191,19 +181,19 @@ def cmd_status(args: argparse.Namespace):
         print(f"  path: {p.path}")
 
         if not p.is_canonical:
-            for d in SHARED_DIRS:
-                link = p.path / d
+            for item in SHARED_DIRS + SHARED_FILES:
+                link = p.path / item
                 if link.is_symlink():
                     target = link.resolve()
-                    expected = (canonical.path / d).resolve()
+                    expected = (canonical.path / item).resolve()
                     if target == expected:
-                        print(f"  {d}: -> {target}")
+                        print(f"  {item}: -> {target}")
                     else:
-                        print(f"  {d}: WRONG -> {target} (expected {expected})")
-                elif link.is_dir():
-                    print(f"  {d}: NOT LINKED (regular dir)")
+                        print(f"  {item}: WRONG -> {target} (expected {expected})")
+                elif link.is_dir() or link.is_file():
+                    print(f"  {item}: NOT LINKED (local copy)")
                 else:
-                    print(f"  {d}: MISSING")
+                    print(f"  {item}: MISSING")
 
     return 0
 
@@ -374,6 +364,30 @@ def _verify_auth(loc: dict):
 
 
 # ── Utilities ──────────────────────────────────────────────────────────
+
+def _ensure_symlink(profile_name: str, item_name: str, link: Path, target: Path, is_dir: bool):
+    """Create or fix a symlink from link -> target."""
+    if link.is_symlink():
+        if link.resolve() == target.resolve():
+            print(f"  {profile_name}/{item_name} -> already linked")
+            return
+        else:
+            link.unlink()
+            print(f"  {profile_name}/{item_name} -> relinked (was pointing elsewhere)")
+
+    if is_dir and link.is_dir():
+        print(f"  {profile_name}/{item_name} -> merging into canonical and linking")
+        _merge_dir(link, target)
+        shutil.rmtree(link)
+    elif link.exists():
+        # For files: copy to canonical if canonical doesn't have it, then remove
+        if not is_dir and not target.exists():
+            shutil.copy2(link, target)
+        link.unlink()
+
+    link.symlink_to(target)
+    print(f"  {profile_name}/{item_name} -> {target}")
+
 
 def _merge_dir(src: Path, dst: Path):
     """Merge src directory contents into dst, skipping duplicates."""

@@ -1,16 +1,33 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=69", "setuptools-scm>=8", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "claude-profiles"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Manage multiple Claude Code profiles — credentials, skills, and memories across nodes"
-requires-python = ">=3.10"
+readme = "README.md"
 license = "MIT"
+authors = [{name = "Amey Agrawal"}]
+keywords = ["claude", "claude-code", "profiles", "credentials", "multi-account"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+requires-python = ">=3.10"
 
 [project.scripts]
 claude-profiles = "claude_profiles.cli:main"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/claude_profiles"]
+[project.urls]
+Homepage = "https://github.com/AgrawalAmey/claude-profiles"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools_scm]
