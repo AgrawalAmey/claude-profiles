@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "claude-profiles"
+version = "0.1.0"
+description = "Manage multiple Claude Code profiles — credentials, skills, and memories across nodes"
+requires-python = ">=3.10"
+license = "MIT"
+
+[project.scripts]
+claude-profiles = "claude_profiles.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/claude_profiles"]
