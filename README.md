@@ -12,11 +12,16 @@ uv tool install claude-profiles  # or install as a tool
 ## Quick start
 
 ```bash
-claude-profiles init      # discover profiles, set up symlinks
-claude-profiles status    # check everything looks right
-```
+# Create a new profile
+claude-profiles create r                       # -> ~/.rclaude
+claude-profiles create work --copy-creds-from s  # with credentials
 
-If you have `~/.claude`, `~/.sclaude`, `~/.rclaude` (or any `~/.{x}claude`), they now share skills, project memories, plugins, plans, and settings.
+# Or discover existing ~/.{x}claude directories
+claude-profiles init
+
+# Check everything looks right
+claude-profiles status
+```
 
 ## Profile names
 
@@ -75,7 +80,8 @@ docker:container[:path]      Docker container (default: /root/.claude)
 
 | Command | Description |
 |---------|-------------|
-| `init` | Discover profiles, create symlinks, merge existing content |
+| `create <name> [--copy-creds-from]` | Create a new profile with symlinks |
+| `init` | Discover existing profiles, set up symlinks |
 | `status` | Show profiles, link health, credential status |
 | `run <profile> [args...]` | Launch claude with a profile |
 | `shell-init` | Print shell aliases for `.zshrc`/`.bashrc` |
