@@ -1,31 +1,17 @@
 # claude-profiles
 
-Manage multiple Claude Code profiles across machines. Share skills, memories, plugins, and settings while keeping credentials separate per profile.
-
-## Install
+Manage multiple Claude Code profiles across machines. Share skills, memories, plugins, and settings while keeping credentials separate.
 
 ```bash
-uvx claude-profiles          # run directly
-uv tool install claude-profiles  # or install as a tool
-```
-
-## Quick start
-
-```bash
-# Create a new profile
-claude-profiles create r                       # -> ~/.rclaude
-claude-profiles create work --copy-creds-from s  # with credentials
-
-# Or discover existing ~/.{x}claude directories
-claude-profiles init
-
-# Check everything looks right
-claude-profiles status
+uvx claude-profiles create r                        # new profile -> ~/.rclaude
+uvx claude-profiles create work --copy-creds-from s  # with credentials
+uvx claude-profiles init                             # or discover existing ones
+uvx claude-profiles status                           # check health
 ```
 
 ## Profile names
 
-The `claude` suffix is implicit — profile names are just the prefix:
+The `claude` suffix is implicit — profiles are just the prefix:
 
 | Directory | Profile | Alias |
 |-----------|---------|-------|
@@ -36,12 +22,11 @@ The `claude` suffix is implicit — profile names are just the prefix:
 ## Launching profiles
 
 ```bash
-# One-off
-claude-profiles run s
-claude-profiles run r --model opus
+uvx claude-profiles run s
+uvx claude-profiles run r --model opus
 
 # Or add aliases to your shell rc:
-eval "$(claude-profiles shell-init)"
+eval "$(uvx claude-profiles shell-init)"
 # Now just type:
 sclaude
 rclaude -p 'explain this'
@@ -62,10 +47,9 @@ rclaude -p 'explain this'
 Push credentials between local profiles, SSH hosts, and Docker containers.
 
 ```bash
-claude-profiles sync -f local:s -t remote:gpu-box -v
-claude-profiles sync -f local:default -t docker:abc123
-claude-profiles sync -f remote:serverA -t remote:serverB
-claude-profiles sync -f local:s -t remote:node:r
+uvx claude-profiles sync -f local:s -t remote:gpu-box -v
+uvx claude-profiles sync -f local:default -t docker:abc123
+uvx claude-profiles sync -f remote:serverA -t remote:serverB
 ```
 
 ### Location syntax
